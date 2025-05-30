@@ -4,16 +4,31 @@ using UnityEngine;
 
 public class Camara : MonoBehaviour
 {
-    public Transform target;
-    public Vector3 offset;       
+    public Transform target;         // A quién seguir (Chan)
+    public float distance = 5f;      // Distancia detrás del jugador
+    public float height = 2f;        // Altura sobre el jugador
+    public float velocidadGiro = 10f; // (opcional) velocidad de giro automático
+
+    private Vector3 offset;
 
     void Start()
     {
-        offset = transform.position - target.position;
+        // Offset inicial relativo al jugador
+        offset = new Vector3(0, height, -distance);
     }
 
     void LateUpdate()
     {
-        transform.position = target.position + offset;
+        // Calcula la posición deseada directamente
+        Vector3 desiredPosition = target.position + target.rotation * offset;
+
+        // Posiciona directamente sin suavizado
+        transform.position = desiredPosition;
+
+        // Mira siempre al personaje
+        transform.LookAt(target);
+
+        // (opcional) rotación automática alrededor
+        // transform.RotateAround(target.position, Vector3.up, velocidadGiro * Time.deltaTime);
     }
 }

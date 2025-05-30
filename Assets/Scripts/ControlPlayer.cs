@@ -6,55 +6,55 @@ using UnityEngine.SceneManagement;
 
 public class ControlPlayer : MonoBehaviour
 {
-    public int vidas = 1;
-
-    float speed = 4.5f;
+    float speed = 5.0f;
     float angle = 2.5f;
-    public bool muerto = false;
 
     public Animator animator;
     public TextMeshProUGUI modoTexto;
     public Transform modeloVisual;
+    public GameObject canvasMuerte; // Asignar en Inspector
 
     enum ModoControl { Teclado, Mouse }
     ModoControl modoActual = ModoControl.Teclado;
 
+    public bool estaMuerto = false;
 
     void Start()
     {
-
+        ActualizarTextoModo();
+        if (canvasMuerte != null)
+            canvasMuerte.SetActive(false);
     }
 
     void Update()
     {
-        if (!muerto)
+        if (estaMuerto) return;
+
+        if (Input.GetKeyDown(KeyCode.V))
         {
-            if (Input.GetKeyDown(KeyCode.V))
-            {
-                modoActual = (modoActual == ModoControl.Teclado) ? ModoControl.Mouse : ModoControl.Teclado;
-                ActualizarTextoModo();
-            }
+            modoActual = (modoActual == ModoControl.Teclado) ? ModoControl.Mouse : ModoControl.Teclado;
+            ActualizarTextoModo();
+        }
 
-            if (modoActual == ModoControl.Teclado)
-            {
-                float horizontal = Input.GetAxis("Horizontal");
-                float vertical = Input.GetAxis("Vertical");
+        if (modoActual == ModoControl.Teclado)
+        {
+            float horizontal = Input.GetAxis("Horizontal");
+            float vertical = Input.GetAxis("Vertical");
 
-                transform.Rotate(0, horizontal * angle, 0, Space.Self);
-                Vector3 moveDirection = new Vector3(0, 0, vertical);
-                moveDirection = transform.rotation * moveDirection;
-                transform.position += moveDirection * speed * Time.deltaTime;
-                animator.SetFloat("Horizontal", horizontal);
-                animator.SetFloat("Vertical", vertical);
+            transform.Rotate(0, horizontal * angle, 0, Space.Self);
+            Vector3 moveDirection = new Vector3(0, 0, vertical);
+            moveDirection = transform.rotation * moveDirection;
+            transform.position += moveDirection * speed * Time.deltaTime;
 
-            }
-            else
-            {
-                float mouseX = Input.GetAxis("Mouse X");
+            animator.SetFloat("Horizontal", horizontal);
+            animator.SetFloat("Vertical", vertical);
+        }
+        else
+        {
+            float mouseX = Input.GetAxis("Mouse X");
 
-                transform.Rotate(0, mouseX * angle * 10f, 0, Space.Self);
-                transform.position += transform.forward * speed * Time.deltaTime;
-            }
+            transform.Rotate(0, mouseX * angle * 10f, 0, Space.Self);
+            transform.position += transform.forward * speed * Time.deltaTime;
 
             animator.SetFloat("Horizontal", 0);
             animator.SetFloat("Vertical", 1);
@@ -69,18 +69,60 @@ public class ControlPlayer : MonoBehaviour
         }
     }
 
-    public void Tomar_damage(int daño)
+    public void Morir()
     {
-        vidas -= daño;
+        if (estaMuerto) return;
+        estaMuerto = true;
+        Debug.Log("Morir llamado desde: " + gameObject.name);
 
-        if (vidas <= 0)
+        GameManager.instancia.jugadorMurio = true;
+
+        animator.SetFloat("Horizontal", 0);
+        animator.SetFloat("Vertical", 0);
+
+        StartCoroutine(CaerYMostrarCanvas());
+    }
+
+    IEnumerator CaerYMostrarCanvas()
+    {
+        Quaternion rotInicial = transform.rotation;
+        Quaternion rotFinal = Quaternion.Euler(90f, transform.eulerAngles.y, transform.eulerAngles.z);
+
+        float duracion = 1f;
+        float tiempo = 0f;
+        
+        while (tiempo < duracion)
         {
-            Muerto();
+            transform.rotation = Quaternion.Slerp(rotInicial, rotFinal, tiempo / duracion);
+            tiempo += Time.deltaTime;
+            yield return null;
+        }
+
+        transform.rotation = rotFinal;
+
+        yield return new WaitForSeconds(1f);
+        canvasMuerte.SetActive(true);
+        Debug.Log("Mostrando canvas de muerte");
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (estaMuerto) return;
+
+        if (other.CompareTag("Enemigo"))
+        {
+            Morir();
         }
     }
 
-    public void Muerto()
+    // Estos métodos serán llamados por los botones del Canvas
+    public void IrAlCielo()
     {
-        muerto = true;
+        SceneManager.LoadScene("Cielo"); 
+    }
+
+    public void VolverAlMenu()
+    {
+        SceneManager.LoadScene("MenuScene"); 
     }
 }
